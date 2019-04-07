@@ -19,11 +19,17 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
+	"androidStatusBar": {
+	  "backgroundColor": "#000"
+	},
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true
+    },
+    "android": {
+      "package": "com.mansurhamidov.kurilkaschedule"
     }
   }
 }

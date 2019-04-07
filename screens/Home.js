@@ -6,7 +6,7 @@ import {
     TimePickerAndroid,
     ScrollView, View,
     Text, TouchableWithoutFeedback,
-    Button
+    Button, Platform
 } from 'react-native';
 import {ListItem, Icon} from 'react-native-elements';
 import {Permissions, Notifications} from 'expo';
@@ -14,17 +14,19 @@ import moment from 'moment';
 import {connect} from 'react-redux';
 import {addSmokingTime, deleteSmokingTime} from '../actions';
 
+const initialState = {
+    timeValue: null,
+    hours: 0,
+    minutes: 0
+};
+
 class HomeScreen extends React.Component {
-    state = {
-        timeValue: null,
-        hours: null,
-        minutes: null
-    };
-    showPicker = async (stateKey, options) => {
+    state = initialState;
+    showPicker = async () => {
         try {
             const {action, hour, minute} = await TimePickerAndroid.open({
-                hour: 0,
-                minute: 0,
+                hour: parseFloat(this.state.hours),
+                minute: parseFloat(this.state.minutes),
                 is24Hour: true, // Will display '2 PM'
             });
             if (action !== TimePickerAndroid.dismissedAction) {
@@ -33,9 +35,7 @@ class HomeScreen extends React.Component {
                     hours: ('0' + hour).slice(-2),
                     minutes: ('0' + minute).slice(-2)
                 };
-                this.setState(newState, () => {
-                    console.log(this.state)
-                });
+                this.setState(newState);
             }
         } catch ({code, message}) {
             console.warn('Cannot open time picker', message);
@@ -43,19 +43,18 @@ class HomeScreen extends React.Component {
     };
 
     async saveSmokingTime() {
+
         const LocalNotification = {
             title: 'Siqaret vaxtıdı Mans',
             body: 'Çıxart birini yandır',
             vibrate: true,
             android: {
-                sound: true
+                channelId: 'smoking-time'
             }
 
         };
         const currentDate = moment().format('YYYYMMDD');
         const scheduleDateTime = moment(`${currentDate}${this.state.hours}${this.state.minutes}00`, 'YYYYMMDDhhmmss').unix();
-        // console.log(new Date(scheduleDateTime * 1000));
-        console.log(currentDate);
         const schedulingOptions = {
             time: scheduleDateTime * 1000,
             repeat: 'day'
@@ -67,6 +66,7 @@ class HomeScreen extends React.Component {
                 LocalNotification, schedulingOptions
             ).then(notificationId => {
                 this.props.addSmokingTime({id: notificationId, ...LocalNotification, smokingTime: this.state.timeValue});
+                this.setState(initialState)
             });
         }
     }
@@ -74,6 +74,16 @@ class HomeScreen extends React.Component {
     deleteSmokingTime (id) {
         Notifications.cancelScheduledNotificationAsync(id);
         this.props.deleteSmokingTime(id);
+    }
+
+    componentDidMount () {
+        if (Platform.OS === 'android') {
+            Expo.Notifications.createChannelAndroidAsync('smoking-time', {
+                name: 'Siqaret vaxtıdı Mans',
+                sound: true,
+                vibrate: [0, 700, 200, 700],
+            });
+        }
     }
 
     render () {
